@@ -2,3 +2,4 @@ from symbol import FEES, set_all_symbols_funding, binance_funding, bybit_funding
 
 
 def best_spread():
+    print()

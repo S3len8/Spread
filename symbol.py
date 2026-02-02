@@ -173,11 +173,11 @@ common_symbols = comparison_symbols(binance=binance, bybit=bybit, bitget=bitget,
 # print(common_symbols, len(common_symbols))  # ['INJ', 'NIL', 'DEXE', 'PTB', 'REZ', 'CHZ', 'BANANA', 'ANIME', 'ANKR', 'FLUID', 'RENDER', 'C98', 'BLUAI', 'CTK', 'PIPPIN', 'GMX', 'LINEA', 'EVAA', 'COOKIE', 'MYX', 'ENJ']
 
 
-def get_funding_binance() -> dict:
+def get_spread_binance() -> dict:
     symbols_set = set(common_symbols)
     result = {}
     # Get funding
-    v = requests.get(BINANCE_FUNDING).json()
+    v = requests.get(BINANCE_ORDER_BOOK).json()
     for key in v:
         symbol = key['symbol']
         if symbol.endswith('USDC'):
@@ -188,58 +188,104 @@ def get_funding_binance() -> dict:
             continue
         symbol = key['symbol']
         result[symbol] = {
-            'funding': float(key['lastFundingRate']),
+            'bid': float(key['bidPrice']),
+            'ask': float(key['askPrice']),
         }
     return result
 
 
-def get_funding_bybit():
+def get_spread_bybit():
     symbols_set = set(common_symbols)
     result = {}
-    # Get data
-    k = requests.get(BYBIT_DATA, params={'category': 'linear'}).json()
+
+    # список инструментов
+    k = requests.get(
+        BYBIT_DATA,
+        params={'category': 'linear'}
+    ).json()
+
     for t in k['result']['list']:
         symbol = t['symbol']
-        funding_raw = t.get('fundingRate')  # Need for getting all symbols with and without funding
-        if symbol.endswith('PERP'):
-            continue
-        if symbol.endswith('USDC'):
-            continue
-        if symbol.endswith('USD'):
+
+        if symbol.endswith(('PERP', 'USDC', 'USD')):
             continue
         if symbol in symbols_set:
             continue
 
-        if funding_raw not in ('', None):
-            result[symbol] = {
-                'funding': float(funding_raw)
+        # стакан
+        ob = requests.get(
+            "https://api.bybit.com/v5/market/orderbook",
+            params={
+                "category": "linear",
+                "symbol": symbol,
+                "limit": 1
             }
-    return result
+        ).json()
 
+        data = ob.get("result", {})
+        bids = data.get("b", [])
+        asks = data.get("a", [])
 
-def get_funding_bitget():
-    symbols_set = set(common_symbols)
-    params = {"productType": "USDT-FUTURES"}
-    result = {}
-    k = requests.get(BITGET, params=params).json()
-    for t in k['data']:
-        symbol = t['symbol']
-        if symbol.endswith('PERP'):
+        if not bids or not asks:
             continue
-        if symbol.endswith('USDC'):
-            continue
-        if symbol.endswith('USD'):
-            continue
-        if symbol in symbols_set:
-            continue
+
+        bid_price = bids[0]
+        ask_price = asks[0]
 
         result[symbol] = {
-            'funding': float(t['fundingRate'])
+            "bid": float(bid_price[0]),
+            "ask": float(ask_price[0]),
         }
+
     return result
 
 
-def get_funding_mexc():
+def get_spread_bitget():
+    symbols_set = set(common_symbols)
+    result = {}
+
+    instruments = requests.get(
+        BITGET,
+        params={"productType": "USDT-FUTURES"}
+    ).json()
+
+    for t in instruments["data"]:
+        symbol = t["symbol"]
+
+        if symbol.endswith(('PERP', 'USDC', 'USD')):
+            continue
+        if symbol in symbols_set:
+            continue
+
+        # стакан
+        ob = requests.get(
+            "https://api.bitget.com/api/v2/mix/market/orderbook",
+            params={
+                "symbol": symbol,
+                "productType": "USDT-FUTURES",
+                "limit": 1
+            }
+        ).json()
+
+        data = ob.get("data", {})
+        bids = data.get("bids", [])
+        asks = data.get("asks", [])
+
+        if not bids or not asks:
+            continue
+
+        bid_price = bids[0]
+        ask_price = asks[0]
+
+        result[symbol] = {
+            "bid": float(bid_price[0]),
+            "ask": float(ask_price[0]),
+        }
+
+    return result
+
+
+def get_spread_mexc():
     symbols_set = set(common_symbols)
     result = {}
     k = requests.get(MEXC).json()
@@ -253,7 +299,8 @@ def get_funding_mexc():
         if normalize_symbol in symbols_set:
             continue
         result[normalize_symbol] = {
-            'funding': float(t['fundingRate']) if 'fundingRate' in t else None
+            'bid': float(t['bid1']) if 'bid1' in t else None,
+            'ask': float(t['ask1']) if 'ask1' in t else None,
         }
     return result
 
@@ -282,31 +329,56 @@ def get_funding_mexc():
 #
 #     return result
 
-async def fetch_funding(session, symbol):
-    url = KUCOIN_FUNDING.format(symbol=symbol)
+async def fetch_spread(session, symbol):
+    url = KUCOIN_ORDER_BOOK.format(symbol=symbol)
+
     try:
         async with session.get(url) as r:
             data = await r.json()
-            if data.get('code') != "200000":
-                print(f"Warning: funding not supported for {symbol} ({data.get('msg')})")
+
+            if data.get("code") != "200000":
+                print(f"Warning: orderbook not available for {symbol}")
                 return symbol, None
-            return symbol, {'funding': float(data['data']['value'])}
+
+            ob = data.get("data", {})
+            bids = ob.get("bids", [])
+            asks = ob.get("asks", [])
+
+            if not bids or not asks:
+                return symbol, None
+
+            bid_price = bids[0]
+            ask_price = asks[0]
+
+            return symbol, {
+                "bid": float(bid_price),
+                "ask": float(ask_price),
+            }
+
     except Exception as e:
         print(f"Error fetching {symbol}: {e}")
         return symbol, None
 
 
-async def get_funding_kucoin(symbols):
-    async with aiohttp.ClientSession() as session:
-        tasks = [fetch_funding(session, s) for s in symbols]
+async def get_spread_kucoin(symbols):
+    timeout = aiohttp.ClientTimeout(total=10)
+
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        tasks = [fetch_spread(session, s) for s in symbols]
         results = await asyncio.gather(*tasks)
-        return dict(results)
+
+        # фильтруем None
+        return {
+            symbol: data
+            for symbol, data in results
+            if data is not None
+        }
 
 
 symbols = [item['symbol'] for item in kucoin_list]
 
 
-def get_funding_gate():
+def get_spread_gate():
     symbols_set = set(common_symbols)
     result = {}
     data = requests.get(GATE).json()
@@ -316,25 +388,26 @@ def get_funding_gate():
         if normalize_symbol in symbols_set:
             continue
         result[normalize_symbol] = {
-            'funding': float(key['funding_rate'])
+            'bid': float(key['highest_bid']),
+            'ask': float(key['lowest_ask']),
         }
 
     return result
 
 
-binance_funding = get_funding_binance()  # Example print {'USDCUSDT': {'funding': 5.301e-05}, 'GRIFFAINUSDT': {'funding': 5e-05}, 'GMXUSDT': {'funding': 6.258e-05}, 'BANUSDT': {'funding': 5e-05}}
-bybit_funding = get_funding_bybit()  # Example print {'0GUSDT': {'funding': -0.00062216}, '1000000BABYDOGEUSDT': {'funding': 5e-05}, '1000000CHEEMSUSDT': {'funding': 5e-05}, '1000000MOGUSDT': {'funding': -0.00065514}}
-bitget_funding = get_funding_bitget()   # Example print {'BTCUSDT': {'funding': 5.8e-05}, 'ETHUSDT': {'funding': 1.5e-05}, 'XRPUSDT': {'funding': 0.0001}, 'BCHUSDT': {'funding': -6.6e-05}, 'LTCUSDT': {'funding': 0.0001}}
-mexc_funding = get_funding_mexc()  # Example {'BTCUSDT': {'funding': 5e-05}, 'ETHUSDT': {'funding': -0.000117}, 'SOLUSDT': {'funding': -0.000196}, 'RIVERUSDT': {'funding': -0.001273}, 'XAUTUSDT': {'funding': 5e-05}}
-kucoin_funding = asyncio.run(get_funding_kucoin(symbols))  # Example {'BTCUSDT': {'funding': -7e-06}, 'ETHUSDT': {'funding': -5.5e-05}, 'SOLUSDT': {'funding': -2.8e-05}, 'WIFUSDT': {'funding': -3e-06}, 'PEPEUSDT': {'funding': -2.2e-05}}  {'XBTUSDTM': {'funding': -7e-06}, 'ETHUSDTM': {'funding': 1.3e-05}, 'SOLUSDTM': {'funding': -3e-06}, 'WIFUSDTM': {'funding': 0.000173}, 'PEPEUSDTM': {'funding': -0.000166}}
-gate_funding = get_funding_gate()  # Example {'DOTUSDT': {'funding': -0.00012}, '人生K线USDT': {'funding': 5e-05}, 'IMXUSDT': {'funding': 5e-05}, 'USUALUSDT': {'funding': 1.2e-05}, 'EPICUSDT': {'funding': -0.00166}, 'IPUSDT': {'funding': 1.2e-05}}
+binance_funding = get_spread_binance()  # Example print {'USDCUSDT': {'funding': 5.301e-05}, 'GRIFFAINUSDT': {'funding': 5e-05}, 'GMXUSDT': {'funding': 6.258e-05}, 'BANUSDT': {'funding': 5e-05}}
+bybit_funding = get_spread_bybit()  # Example print {'0GUSDT': {'funding': -0.00062216}, '1000000BABYDOGEUSDT': {'funding': 5e-05}, '1000000CHEEMSUSDT': {'funding': 5e-05}, '1000000MOGUSDT': {'funding': -0.00065514}}
+bitget_funding = get_spread_bitget()   # Example print {'BTCUSDT': {'funding': 5.8e-05}, 'ETHUSDT': {'funding': 1.5e-05}, 'XRPUSDT': {'funding': 0.0001}, 'BCHUSDT': {'funding': -6.6e-05}, 'LTCUSDT': {'funding': 0.0001}}
+mexc_funding = get_spread_mexc()  # Example {'BTCUSDT': {'funding': 5e-05}, 'ETHUSDT': {'funding': -0.000117}, 'SOLUSDT': {'funding': -0.000196}, 'RIVERUSDT': {'funding': -0.001273}, 'XAUTUSDT': {'funding': 5e-05}}
+kucoin_funding = asyncio.run(get_spread_kucoin(symbols))  # Example {'BTCUSDT': {'funding': -7e-06}, 'ETHUSDT': {'funding': -5.5e-05}, 'SOLUSDT': {'funding': -2.8e-05}, 'WIFUSDT': {'funding': -3e-06}, 'PEPEUSDT': {'funding': -2.2e-05}}  {'XBTUSDTM': {'funding': -7e-06}, 'ETHUSDTM': {'funding': 1.3e-05}, 'SOLUSDTM': {'funding': -3e-06}, 'WIFUSDTM': {'funding': 0.000173}, 'PEPEUSDTM': {'funding': -0.000166}}
+gate_funding = get_spread_gate()  # Example {'DOTUSDT': {'funding': -0.00012}, '人生K线USDT': {'funding': 5e-05}, 'IMXUSDT': {'funding': 5e-05}, 'USUALUSDT': {'funding': 1.2e-05}, 'EPICUSDT': {'funding': -0.00166}, 'IPUSDT': {'funding': 1.2e-05}}
 no_kucoin_funding = {k.replace('USDTM', 'USDT').replace('XBT', 'BTC'): v for k, v in kucoin_funding.items()}  # Need for converting symbols ETHUSDTM to ETHUSDT
-# print(binance_funding)
-# print(bybit_funding)
-# print(bitget_funding)
-# print(mexc_funding)
-# print(kucoin_funding)
-# print(gate_funding)
+print(binance_funding)
+print(bybit_funding)
+print(bitget_funding)
+print(mexc_funding)
+print(kucoin_funding)
+print(gate_funding)
 # print(no_kucoin_funding)
 set_all_symbols_funding = set().union(binance_funding, bybit_funding, bitget_funding, mexc_funding, no_kucoin_funding, gate_funding)
 # print(set_all_symbols_funding, len(set_all_symbols_funding))
