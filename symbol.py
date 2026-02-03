@@ -20,6 +20,7 @@ MEXC = 'https://contract.mexc.com/api/v1/contract/ticker'
 KUCOIN = 'https://api-futures.kucoin.com/api/v1/contracts/active'
 KUCOIN_FUNDING = "https://api-futures.kucoin.com/api/v1/funding-rate/{symbol}/current"
 KUCOIN_ORDER_BOOK = 'https://api-futures.kucoin.com/api/v1/ticker'
+KUCOIN_ORDER_BOOK_SECOND_API = 'https://api-futures.kucoin.com/api/v1/level2/snapshot'
 
 GATE = 'https://api.gateio.ws/api/v4/futures/usdt/tickers'
 
@@ -330,12 +331,11 @@ def get_spread_mexc():
 #     return result
 
 async def fetch_spread(session, symbol):
-    url = KUCOIN_ORDER_BOOK.format(symbol=symbol)
+    url = KUCOIN_ORDER_BOOK_SECOND_API.format()
 
     try:
-        async with session.get(url) as r:
+        async with session.get(url, params={"symbol": symbol}) as r:
             data = await r.json()
-
             if data.get("code") != "200000":
                 print(f"Warning: orderbook not available for {symbol}")
                 return symbol, None
@@ -351,8 +351,8 @@ async def fetch_spread(session, symbol):
             ask_price = asks[0]
 
             return symbol, {
-                "bid": float(bid_price),
-                "ask": float(ask_price),
+                "bid": float(bid_price[0]),
+                "ask": float(ask_price[0]),
             }
 
     except Exception as e:
@@ -361,9 +361,7 @@ async def fetch_spread(session, symbol):
 
 
 async def get_spread_kucoin(symbols):
-    timeout = aiohttp.ClientTimeout(total=10)
-
-    async with aiohttp.ClientSession(timeout=timeout) as session:
+    async with aiohttp.ClientSession() as session:
         tasks = [fetch_spread(session, s) for s in symbols]
         results = await asyncio.gather(*tasks)
 
@@ -402,12 +400,12 @@ mexc_funding = get_spread_mexc()  # Example {'BTCUSDT': {'funding': 5e-05}, 'ETH
 kucoin_funding = asyncio.run(get_spread_kucoin(symbols))  # Example {'BTCUSDT': {'funding': -7e-06}, 'ETHUSDT': {'funding': -5.5e-05}, 'SOLUSDT': {'funding': -2.8e-05}, 'WIFUSDT': {'funding': -3e-06}, 'PEPEUSDT': {'funding': -2.2e-05}}  {'XBTUSDTM': {'funding': -7e-06}, 'ETHUSDTM': {'funding': 1.3e-05}, 'SOLUSDTM': {'funding': -3e-06}, 'WIFUSDTM': {'funding': 0.000173}, 'PEPEUSDTM': {'funding': -0.000166}}
 gate_funding = get_spread_gate()  # Example {'DOTUSDT': {'funding': -0.00012}, '人生K线USDT': {'funding': 5e-05}, 'IMXUSDT': {'funding': 5e-05}, 'USUALUSDT': {'funding': 1.2e-05}, 'EPICUSDT': {'funding': -0.00166}, 'IPUSDT': {'funding': 1.2e-05}}
 no_kucoin_funding = {k.replace('USDTM', 'USDT').replace('XBT', 'BTC'): v for k, v in kucoin_funding.items()}  # Need for converting symbols ETHUSDTM to ETHUSDT
-print(binance_funding)
-print(bybit_funding)
-print(bitget_funding)
-print(mexc_funding)
-print(kucoin_funding)
-print(gate_funding)
-# print(no_kucoin_funding)
-set_all_symbols_funding = set().union(binance_funding, bybit_funding, bitget_funding, mexc_funding, no_kucoin_funding, gate_funding)
+# print(binance_funding)
+# print(bybit_funding)
+# print(bitget_funding)
+# # print(mexc_funding)
+# print(kucoin_funding)
+# print(gate_funding)
+print(no_kucoin_funding)
+# set_all_symbols_funding = set().union(binance_funding, bybit_funding, bitget_funding, mexc_funding, no_kucoin_funding, gate_funding)
 # print(set_all_symbols_funding, len(set_all_symbols_funding))
