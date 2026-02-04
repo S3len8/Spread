@@ -369,6 +369,7 @@ def get_data_kucoin(symbol: str) -> dict:
     k = requests.get(KUCOIN_ORDER_BOOK, params={"symbol": symbol_kucoin}).json()
     d = requests.get(KUCOIN, params={"symbol": symbol_kucoin}).json()
     data = k['data']
+    print(data)
     for c in d["data"]:
         if c["symbol"] == symbol_kucoin:
             volume = float(c.get("turnoverOf24h", 0))
@@ -381,10 +382,12 @@ def get_data_kucoin(symbol: str) -> dict:
 
 
 symbols = [item['symbol'] for item in kucoin_list]
-def symbols():
-    for symbol in symbols:
-        get_data_kucoin(symbol)
 
+def kucoin():
+    for symbol in symbols:
+        print(symbol)
+        funding_kucoin = get_data_kucoin(symbol)
+    return funding_kucoin
 
 def get_spread_gate():
     symbols_set = set(common_symbols)
@@ -425,7 +428,7 @@ source_data = {
     'bybit': bybit_funding,
     'bitget': bitget_funding,
     'mexc': mexc_funding,
-    'kucoin': symbols(),
+    'kucoin': kucoin(),
     'gate': gate_funding,
 }
 print(source_data)
