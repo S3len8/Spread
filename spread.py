@@ -1,29 +1,88 @@
 from symbol import binance_funding, bitget_funding, mexc_funding, gate_funding, source_data
 
+bybit_spread = source_data['bybit']
+kucoin_spread = source_data['kucoin']
 
-def min_bid():
+
+def get_all_bid():
     binance = {
         symbol: value['bid']
         for symbol, value in binance_funding.items()
     }
+    bybit = {
+        symbol: value['bid']
+        for symbol, value in bybit_spread.items()
+    }
+    bitget = {
+        symbol: value['bid']
+        for symbol, value in bitget_funding.items()
+    }
+    mexc = {
+        symbol: value['bid']
+        for symbol, value in mexc_funding.items()
+    }
+    kucoin = {
+        symbol: value['bid']
+        for symbol, value in kucoin_spread.items()
+    }
+    gate = {
+        symbol: value['bid']
+        for symbol, value in gate_funding.items()
+    }
 
     return {
         'binance': binance,
+        'bybit': bybit,
+        'bitget': bitget,
+        'mexc': mexc,
+        'kucoin': kucoin,
+        'gate': gate,
     }
 
 
-min_bid = min_bid()
-print(min_bid)
+get_all_bid = get_all_bid()
+print(get_all_bid)
 
 
-def max_ask():
-    pass
+def get_all_ask():
+    binance = {
+        symbol: value['ask']
+        for symbol, value in binance_funding.items()
+    }
+    bybit = {
+        symbol: value['ask']
+        for symbol, value in bybit_spread.items()
+    }
+    bitget = {
+        symbol: value['ask']
+        for symbol, value in bitget_funding.items()
+    }
+    mexc = {
+        symbol: value['ask']
+        for symbol, value in mexc_funding.items()
+    }
+    kucoin = {
+        symbol: value['ask']
+        for symbol, value in kucoin_spread.items()
+    }
+    gate = {
+        symbol: value['ask']
+        for symbol, value in gate_funding.items()
+    }
+
+    return {
+        'binance': binance,
+        'bybit': bybit,
+        'bitget': bitget,
+        'mexc': mexc,
+        'kucoin': kucoin,
+        'gate': gate,
+    }
+
+
+get_all_ask = get_all_ask()
+print(get_all_ask)
 
 
 def spread():
-    binance = binance_funding
-    bybit = source_data['bybit']
-    bitget = bitget_funding
-    mexc = mexc_funding
-    kucoin = source_data['kucoin']
-    gate = gate_funding
+    pass
