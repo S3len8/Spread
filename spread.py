@@ -84,5 +84,16 @@ get_all_ask = get_all_ask()
 print(get_all_ask)
 
 
+def min_bid():
+    for exchange, value in get_all_bid.items():
+        for symbol, bid in value.items():
+            binance = bid
+            print(binance)
+
+
+min_bid = min_bid()
+print(min_bid)
+
+
 def spread():
     pass
