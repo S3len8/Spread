@@ -309,7 +309,7 @@ mexc_funding = get_spread_mexc()  # Example {'BTCUSDT': {'funding': 5e-05}, 'ETH
 gate_funding = get_spread_gate()  # Example {'DOTUSDT': {'funding': -0.00012}, '人生K线USDT': {'funding': 5e-05}, 'IMXUSDT': {'funding': 5e-05}, 'USUALUSDT': {'funding': 1.2e-05}, 'EPICUSDT': {'funding': -0.00166}, 'IPUSDT': {'funding': 1.2e-05}}
 # kucoin_funding = get_data_kucoin(symbols)
 # no_kucoin_funding = {k.replace('USDTM', 'USDT').replace('XBT', 'BTC'): v for k, v in kucoin_funding.items()}  # Need for converting symbols ETHUSDTM to ETHUSDT
-print(binance_funding)
+# print(binance_funding)
 # # print(bybit_funding)
 # print(bitget_funding)
 # print(mexc_funding)
@@ -350,4 +350,4 @@ async def main():
         }
 
 source_data = asyncio.run(main())
-print(source_data)
+# print(source_data)

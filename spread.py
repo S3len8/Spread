@@ -85,10 +85,36 @@ print(get_all_ask)
 
 
 def min_bid():
-    for exchange, value in get_all_bid.items():
-        for symbol, bid in value.items():
-            binance = bid
-            print(binance)
+    result = {}
+
+    # Getting unique symbols
+    all_symbols = set()
+
+    for exchange_data in get_all_bid.values():
+        all_symbols.update(exchange_data.keys())
+
+    # For symbols get min bid
+    for symbol in all_symbols:
+        min_bid = float("inf")
+        min_exchange = None
+
+        for exchange, exchange_data in get_all_bid.items():
+            bid = exchange_data.get(symbol)
+
+            if bid is None:
+                continue
+
+            if bid < min_bid:
+                min_bid = bid
+                min_exchange = exchange
+
+        if min_exchange:
+            result[symbol] = {
+                "exchange": min_exchange,
+                "min_bid": min_bid
+            }
+
+    return result
 
 
 min_bid = min_bid()
