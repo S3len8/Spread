@@ -117,9 +117,62 @@ def min_bid():
     return result
 
 
-min_bid = min_bid()
-print(min_bid)
+bid = min_bid()
+print(bid)
+
+
+def max_ask():
+    result = {}
+
+    # Getting unique symbols
+    all_symbols = set()
+
+    for exchange_data in get_all_ask.values():
+        all_symbols.update(exchange_data.keys())
+
+    # For symbols get min bid
+    for symbol in all_symbols:
+        max_ask = float("inf")
+        max_exchange = None
+
+        for exchange, exchange_data in get_all_ask.items():
+            ask = exchange_data.get(symbol)
+
+            if ask is None:
+                continue
+
+            if ask < max_ask:
+                max_ask = ask
+                max_exchange = exchange
+
+        if max_exchange:
+            result[symbol] = {
+                "exchange": max_exchange,
+                "max_ask": max_ask
+            }
+
+    return result
+
+
+ask = max_ask()
+print(ask)
 
 
 def spread():
-    pass
+    all_symbols = set(bid.keys()) | set(ask.keys())  # объединяем ключи
+
+    for symbol in all_symbols:
+        min_info = bid.get(symbol)
+        max_info = ask.get(symbol)
+
+        min_bid = min_info['min_bid'] if min_info else None
+        min_exchange = min_info['exchange'] if min_info else None
+
+        max_ask = max_info['max_ask'] if max_info else None
+        max_exchange = max_info['exchange'] if max_info else None
+        if min_exchange != max_exchange:
+            spread = max_ask / min_bid
+            print(symbol, "min_bid:", min_bid, "from", min_exchange, "| max_ask:", max_ask, "from", max_exchange, 'Spread', spread)
+
+
+spread()
