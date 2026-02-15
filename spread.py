@@ -41,7 +41,7 @@ def get_all_bid():
 
 
 get_all_bid = get_all_bid()
-print(get_all_bid)
+# print(get_all_bid)
 
 
 def get_all_ask():
@@ -81,21 +81,19 @@ def get_all_ask():
 
 
 get_all_ask = get_all_ask()
-print(get_all_ask)
+# print(get_all_ask)
 
 
 def min_bid():
     result = {}
 
-    # Getting unique symbols
     all_symbols = set()
 
     for exchange_data in get_all_bid.values():
         all_symbols.update(exchange_data.keys())
 
-    # For symbols get min bid
     for symbol in all_symbols:
-        min_bid = float("inf")
+        min_value = float("inf")
         min_exchange = None
 
         for exchange, exchange_data in get_all_bid.items():
@@ -104,14 +102,14 @@ def min_bid():
             if bid is None:
                 continue
 
-            if bid < min_bid:
-                min_bid = bid
+            if bid < min_value:
+                min_value = bid
                 min_exchange = exchange
 
-        if min_exchange:
+        if min_exchange is not None:
             result[symbol] = {
                 "exchange": min_exchange,
-                "min_bid": min_bid
+                "min_bid": min_value
             }
 
     return result
@@ -124,15 +122,13 @@ print(bid)
 def max_ask():
     result = {}
 
-    # Getting unique symbols
     all_symbols = set()
 
     for exchange_data in get_all_ask.values():
         all_symbols.update(exchange_data.keys())
 
-    # For symbols get min bid
     for symbol in all_symbols:
-        max_ask = float("inf")
+        max_value = float("-inf")
         max_exchange = None
 
         for exchange, exchange_data in get_all_ask.items():
@@ -141,14 +137,14 @@ def max_ask():
             if ask is None:
                 continue
 
-            if ask < max_ask:
-                max_ask = ask
+            if ask > max_value:
+                max_value = ask
                 max_exchange = exchange
 
-        if max_exchange:
+        if max_exchange is not None:
             result[symbol] = {
                 "exchange": max_exchange,
-                "max_ask": max_ask
+                "max_ask": max_value
             }
 
     return result
@@ -159,20 +155,55 @@ print(ask)
 
 
 def spread():
-    all_symbols = set(bid.keys()) | set(ask.keys())  # объединяем ключи
+    result = {}
+
+    all_symbols = set()
+
+    for exchange_data in get_all_bid.values():
+        all_symbols.update(exchange_data.keys())
 
     for symbol in all_symbols:
-        min_info = bid.get(symbol)
-        max_info = ask.get(symbol)
+        min_ask = float("inf")
+        max_bid = float("-inf")
 
-        min_bid = min_info['min_bid'] if min_info else None
-        min_exchange = min_info['exchange'] if min_info else None
+        min_ask_exchange = None
+        max_bid_exchange = None
 
-        max_ask = max_info['max_ask'] if max_info else None
-        max_exchange = max_info['exchange'] if max_info else None
-        if min_exchange != max_exchange:
-            spread = max_ask / min_bid
-            print(symbol, "min_bid:", min_bid, "from", min_exchange, "| max_ask:", max_ask, "from", max_exchange, 'Spread', spread)
+        for exchange in get_all_bid.keys():
+            bid = get_all_bid[exchange].get(symbol)
+            ask = get_all_ask[exchange].get(symbol)
+
+            if bid is not None and bid > max_bid:
+                max_bid = bid
+                max_bid_exchange = exchange
+
+            if ask is not None and ask < min_ask:
+                min_ask = ask
+                min_ask_exchange = exchange
+
+        # Need for don`t get same exchanges
+        if (
+            min_ask_exchange
+            and max_bid_exchange
+            and min_ask_exchange != max_bid_exchange
+            and min_ask != 0
+        ):
+            result[symbol] = {
+                "buy_on": min_ask_exchange,
+                "sell_on": max_bid_exchange,
+                "min_ask": min_ask,
+                "max_bid": max_bid,
+                "spread_ratio": max_bid / min_ask
+            }
+
+    return result
 
 
-spread()
+spread = spread()
+
+for symbol, data in spread.items():
+    print(symbol, data)
+
+
+# spread_data = spread()
+# print(spread_data)
