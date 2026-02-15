@@ -207,3 +207,17 @@ for symbol, data in spread.items():
 
 # spread_data = spread()
 # print(spread_data)
+
+def spread_ratio():
+    result = {}
+    for symbol, value in spread.items():
+        if value['spread_ratio'] > 1.012:
+            result[symbol] = {
+                'spread': value['spread_ratio']
+            }
+
+    return result
+
+
+spread_ratio = spread_ratio()
+print(spread_ratio)
