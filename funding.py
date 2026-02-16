@@ -20,6 +20,7 @@ def get_funding_binance() -> dict:
             # Check have exchange binance in summary_volume
             if 'binance' in value['buy_on'] or 'binance' in value['sell_on']:
                 result[binance_symbol] = {
+                    'exchange': 'binance',
                     'funding': float(item['lastFundingRate'])
                 }
 
@@ -48,6 +49,7 @@ def get_funding_bybit():
             # Check have exchange bybit in summary_volume
             if 'bybit' in value['buy_on'] or 'bybit' in value['sell_on']:
                 result[bybit_symbol] = {
+                    'exchange': 'bybit',
                     'funding': float(funding_raw)
                 }
 
@@ -75,6 +77,7 @@ def get_funding_bitget():
             # Check have exchange bitget in summary_volume
             if 'bitget' in value['buy_on'] or 'bitget' in value['sell_on']:
                 result[bitget_symbol] = {
+                    'exchange': 'bitget',
                     'funding': float(item['fundingRate'])
                 }
 
@@ -101,6 +104,7 @@ def get_funding_mexc():
             # Check have exchange mexc in summary_volume
             if 'mexc' in value['buy_on'] or 'mexc' in value['sell_on']:
                 result[mexc_symbol] = {
+                    'exchange': 'mexc',
                     'funding': float(item['fundingRate'])
                 }
 
@@ -138,6 +142,7 @@ async def fetch_funding(session, symbol):
             normalized_symbol = normalize_kucoin_symbol(symbol)
 
             return normalized_symbol, {
+                'exchange': 'kucoin',
                 'funding': float(data['data']['value'])
             }
 
@@ -178,6 +183,7 @@ def get_funding_gate():
             # Check have exchange gate in summary_volume
             if 'gate' in value['buy_on'] or 'gate' in value['sell_on']:
                 result[gate_symbols] = {
+                    'exchange': 'gate',
                     'funding': float(item['funding_rate'])
                 }
 
@@ -196,3 +202,43 @@ print(get_funding_bitget)
 print(get_funding_mexc)
 print(get_funding_kucoin)
 print(get_funding_gate)
+
+
+def summary_funding():
+    result = {}
+    exchanges = {
+        'binance': get_funding_binance,
+        'bybit': get_funding_bybit,
+        'bitget': get_funding_bitget,
+        'mexc': get_funding_mexc,
+        'kucoin': get_funding_kucoin,
+        'gate': get_funding_gate,
+    }
+    for symbol, value in summary_volume.items():
+        buy_exchange = value['buy_on']
+        sell_exchange = value['sell_on']
+
+        # Check exchanges in dictionary exchanges
+        if buy_exchange not in exchanges or sell_exchange not in exchanges:
+            continue
+
+        buy_funding = exchanges[buy_exchange].get(symbol, {}).get('funding')
+        sell_funding = exchanges[sell_exchange].get(symbol, {}).get('funding')
+
+        result[symbol] = {
+            'buy_on': value['buy_on'],
+            'sell_on': value['sell_on'],
+            'funding buy_on': buy_funding,
+            'funding sell_on': sell_funding,
+            'spread': value['spread'],
+        }
+
+    return result
+
+
+summary_funding = summary_funding()
+print(summary_funding)
+
+
+for symbol, data in summary_volume.items():
+    print(symbol, data)
