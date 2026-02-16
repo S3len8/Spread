@@ -1,6 +1,5 @@
 import requests
 from symbol import BINANCE_ORDER_BOOK, BINANCE_DATA, BYBIT_DATA, BITGET, MEXC, KUCOIN, KUCOIN_ORDER_BOOK, GATE
-from filtered_funding import symbols_map
 
 
 # Function for data binance
@@ -14,8 +13,6 @@ def get_data_binance(symbol: str) -> dict:
     for t in q:
         if t['symbol'] == symbol:
             result[symbol] = {
-                'bid': float(t['bidPrice']),
-                'ask': float(t['askPrice']),
                 'volume 24H': volume.get(symbol, 0.0),
             }
     return result
@@ -29,8 +26,6 @@ def get_data_bybit(symbol: str) -> dict:
     for t in k['result']['list']:
         if t['symbol'] == symbol:
             result[symbol] = {
-                'bid': float(t['bid1Price']),
-                'ask': float(t['ask1Price']),
                 'volume 24H': float(t['turnover24h']),
             }
     return result
@@ -43,8 +38,6 @@ def get_data_bitget(symbol: str) -> dict:
     for t in k['data']:
         if t['symbol'] == symbol:
             result[symbol] = {
-                'bid': float(t['bidPr']),
-                'ask': float(t['askPr']),
                 'volume 24H': float(t['usdtVolume']),
             }
     return result
@@ -56,8 +49,6 @@ def get_data_mexc(symbol: str) -> dict:
     for t in k['data']:
         if t['symbol'] == symbol.replace('USDT', '_USDT'):
             result[symbol] = {
-                'bid': float(t['bid1']),
-                'ask': float(t['ask1']),
                 'volume 24H': float(t['volume24']),
             }
     return result
@@ -66,15 +57,11 @@ def get_data_mexc(symbol: str) -> dict:
 def get_data_kucoin(symbol: str) -> dict:
     result = {}
     symbol_kucoin = symbol.replace('USDT', 'USDTM').replace('BTC', 'XBT')
-    k = requests.get(KUCOIN_ORDER_BOOK, params={"symbol": symbol_kucoin}).json()
     d = requests.get(KUCOIN, params={"symbol": symbol_kucoin}).json()
-    data = k['data']
     for c in d["data"]:
         if c["symbol"] == symbol_kucoin:
             volume = float(c.get("turnoverOf24h", 0))
     result[symbol] = {
-        'bid': float(data['bestBidPrice']),
-        'ask': float(data['bestAskPrice']),
         'volume 24H': volume,
     }
     return result
@@ -86,8 +73,6 @@ def get_data_gate(symbol: str) -> dict:
     for t in k:
         if t['contract'] == symbol.replace('USDT', '_USDT'):
             result[symbol] = {
-                'bid': float(t['highest_bid']),
-                'ask': float(t['lowest_ask']),
                 'volume 24H': float(t['volume_24h_base']),
             }
     return result
