@@ -221,3 +221,11 @@ def spread_ratio():
 
 spread_ratio = spread_ratio()
 print(spread_ratio)
+
+
+def summary():
+    result = {}
+    for symbol in spread_ratio.keys() & spread.keys():
+        result[symbol] = {
+
+        }
