@@ -98,8 +98,6 @@ get_data_mexc = get_data_mexc()
 get_data_kucoin = get_data_kucoin()
 get_data_gate = get_data_gate()
 
-dictionary_keys = get_data_binance.keys() | get_data_bybit.keys() | get_data_bitget.keys() | get_data_mexc.keys() | get_data_kucoin.keys() | get_data_gate.keys()
-
 
 def summary_volume():
     result = {}
@@ -130,11 +128,11 @@ def summary_volume():
     return result
 
 
-print(get_data_binance)
-print(get_data_bybit)
-print(get_data_bitget)
-print(get_data_mexc)
-print(get_data_kucoin)
-print(get_data_gate)
+# print(get_data_binance)
+# print(get_data_bybit)
+# print(get_data_bitget)
+# print(get_data_mexc)
+# print(get_data_kucoin)
+# print(get_data_gate)
 
 print(summary_volume())
