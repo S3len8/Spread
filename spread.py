@@ -227,5 +227,13 @@ def summary():
     result = {}
     for symbol in spread_ratio.keys() & spread.keys():
         result[symbol] = {
-
+            'buy_on': spread[symbol]['buy_on'],
+            'sell_on': spread[symbol]['sell_on'],
+            'spread': spread_ratio[symbol]['spread']
         }
+
+    return result
+
+
+summary = summary()
+print(summary)
