@@ -128,6 +128,8 @@ def summary_volume():
     return result
 
 
+summary_volume = summary_volume()
+
 # print(get_data_binance)
 # print(get_data_bybit)
 # print(get_data_bitget)
@@ -135,4 +137,4 @@ def summary_volume():
 # print(get_data_kucoin)
 # print(get_data_gate)
 
-print(summary_volume())
+print(summary_volume)
