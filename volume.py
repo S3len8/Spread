@@ -91,9 +91,50 @@ def get_data_gate() -> dict:
     return result
 
 
-print(get_data_binance())
-print(get_data_bybit())
-print(get_data_bitget())
-print(get_data_mexc())
-print(get_data_kucoin())
-print(get_data_gate())
+get_data_binance = get_data_binance()
+get_data_bybit = get_data_bybit()
+get_data_bitget = get_data_bitget()
+get_data_mexc = get_data_mexc()
+get_data_kucoin = get_data_kucoin()
+get_data_gate = get_data_gate()
+
+dictionary_keys = get_data_binance.keys() | get_data_bybit.keys() | get_data_bitget.keys() | get_data_mexc.keys() | get_data_kucoin.keys() | get_data_gate.keys()
+
+
+def summary_volume():
+    result = {}
+    exchanges = {
+        'binance': get_data_binance,
+        'bybit': get_data_bybit,
+        'bitget': get_data_bitget,
+        'mexc': get_data_mexc,
+        'kucoin': get_data_kucoin,
+        'gate': get_data_gate,
+    }
+    for symbol, value in summary.items():
+        buy_exchange = value['buy_on']
+        sell_exchange = value['sell_on']
+
+        buy_volume = None
+        sell_volume = None
+        if symbol in exchanges[buy_exchange]:
+            buy_volume = exchanges[buy_exchange].get(symbol, {}).get('volume 24H')
+            sell_volume = exchanges[sell_exchange].get(symbol, {}).get('volume 24H')
+            result[symbol] = {
+                'buy_on': value['buy_on'],
+                'sell_on': value['sell_on'],
+                'spread': value['spread'],
+                'volume_buy_24H': buy_volume,
+                'volume_sell_24H': sell_volume,
+            }
+    return result
+
+
+print(get_data_binance)
+print(get_data_bybit)
+print(get_data_bitget)
+print(get_data_mexc)
+print(get_data_kucoin)
+print(get_data_gate)
+
+print(summary_volume())
