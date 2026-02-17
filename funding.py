@@ -230,6 +230,8 @@ def summary_funding():
             'sell_on': value['sell_on'],
             'funding buy_on': buy_funding,
             'funding sell_on': sell_funding,
+            'volume_buy_24H': value['volume_buy_24H'],
+            'volume_sell_24H': value['volume_sell_24H'],
             'spread': value['spread'],
         }
 
@@ -240,5 +242,5 @@ summary_funding = summary_funding()
 print(summary_funding)
 
 
-for symbol, data in summary_volume.items():
+for symbol, data in summary_funding.items():
     print(symbol, data)
