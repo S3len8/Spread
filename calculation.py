@@ -27,6 +27,12 @@ def calculation():
                 funding_all = funding_sell + funding_buy
                 spread_all = spread + funding_all
             result[symbol] = {
+                'buy_on': value['buy_on'],
+                'sell_on': value['sell_on'],
+                'funding buy_on': value['funding buy_on'],
+                'funding sell_on': value['funding sell_on'],
+                'volume_buy_24H': value['volume_buy_24H'],
+                'volume_sell_24H': value['volume_sell_24H'],
                 'spread_all': spread_all,
                 'spread': spread
             }
