@@ -3,7 +3,8 @@ from calculation import calculation
 import asyncio
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
+import subprocess
 
 TOKEN = '8209170851:AAGViuYiZsc7O2m_P-yoMYDKOVmfPcoOZJ4'
 
@@ -13,7 +14,8 @@ dp = Dispatcher()
 # Button
 keyboard = InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(text="📊 Active Spread", callback_data="show_spread")]
+        [InlineKeyboardButton(text="📊 Active Spread", callback_data="show_spread")],
+        [InlineKeyboardButton(text="Start", callback_data='')]
     ]
 )
 
@@ -24,13 +26,33 @@ async def start(message: types.Message):
     await message.answer('Choose activity:', reply_markup=keyboard)
 
 
+@dp.message(Command("start_script"))
+async def start_script(message: Message):
+    await message.answer("Запускаю файл...")
+
+    # Запуск файла
+    process = subprocess.Popen(
+        ["python", "calculation.py"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True
+    )
+
+    stdout, stderr = process.communicate()
+
+    if stdout:
+        await message.answer(f"Вывод:\n{stdout}")
+    if stderr:
+        await message.answer(f"Ошибка:\n{stderr}")
+
+
 # Button click processing
 @dp.callback_query()
 async def callback_handler(callback: types.CallbackQuery):
 
     if callback.data == "show_spread":
 
-        data = calculation
+        data = calculation()
 
         text = ""
 
