@@ -39,5 +39,6 @@ def calculation():
     return result
 
 
-calculation = calculation()
-print(calculation)
+if __name__ == '__main__':
+    calculation = calculation()
+    print(calculation)
