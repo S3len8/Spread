@@ -1,59 +1,39 @@
-import aiogram
+from contextlib import asynccontextmanager
 from calculation import calculation
-import asyncio
+
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
-import subprocess
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Update
+from aiogram.fsm.storage.memory import MemoryStorage
 
-TOKEN = '8209170851:AAGViuYiZsc7O2m_P-yoMYDKOVmfPcoOZJ4'
+from fastapi import FastAPI, Request
 
-bot = Bot(token=TOKEN)
-dp = Dispatcher()
+# ====== Config ======
+BOT_TOKEN = "8209170851:AAGViuYiZsc7O2m_P-yoMYDKOVmfPcoOZJ4"
+WEBHOOK_URL = "https://labradoritic-ingestible-clementina.ngrok-free.dev/webhook"  # Update every time ngrok restarts
 
-# Button
+# ====== Initialization ======
+bot = Bot(token=BOT_TOKEN)
+dp = Dispatcher(storage=MemoryStorage())
+
+# ====== Keyboard ======
 keyboard = InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(text="📊 Active Spread", callback_data="show_spread")],
-        [InlineKeyboardButton(text="Start", callback_data='')]
+        [InlineKeyboardButton(text="📊 Active Spreads", callback_data="show_spread")]
     ]
 )
 
 
-# Start
-@dp.message(Command('start'))
-async def start(message: types.Message):
-    await message.answer('Choose activity:', reply_markup=keyboard)
+# ====== Handlers ======
+@dp.message(Command("start"))
+async def start_handler(message: types.Message):
+    await message.answer("Choose activity:", reply_markup=keyboard)
 
 
-@dp.message(Command("start_script"))
-async def start_script(message: Message):
-    await message.answer("Запускаю файл...")
-
-    # Запуск файла
-    process = subprocess.Popen(
-        ["python", "calculation.py"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True
-    )
-
-    stdout, stderr = process.communicate()
-
-    if stdout:
-        await message.answer(f"Вывод:\n{stdout}")
-    if stderr:
-        await message.answer(f"Ошибка:\n{stderr}")
-
-
-# Button click processing
 @dp.callback_query()
 async def callback_handler(callback: types.CallbackQuery):
-
     if callback.data == "show_spread":
-
         data = calculation()
-
         text = ""
 
         for symbol, value in data.items():
@@ -75,11 +55,30 @@ async def callback_handler(callback: types.CallbackQuery):
         await callback.answer()
 
 
-async def main():
-    await dp.start_polling(bot)
+# ====== Lifespan (replaces on_event) ======
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Runs on startup
+    await bot.set_webhook(WEBHOOK_URL)
+    print(f"Webhook set: {WEBHOOK_URL}")
+    yield
+    # Runs on shutdown
+    await bot.delete_webhook()
+    print("Webhook deleted")
 
 
-if __name__ == '__main__':
-    asyncio.run(main())
+# ====== FastAPI application ======
+app = FastAPI(lifespan=lifespan)
 
 
+@app.post("/webhook")
+async def telegram_webhook(request: Request):
+    data = await request.json()
+    update = Update.model_validate(data)
+    await dp.feed_update(bot, update)
+    return {"ok": True}
+
+
+@app.get("/")
+async def health_check():
+    return {"status": "running"}
