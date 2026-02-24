@@ -1,6 +1,8 @@
 import aiohttp
 import asyncio
 import requests
+import nest_asyncio
+nest_asyncio.apply()
 
 
 API_KEY = 'OcirhzEKhIgPDd9wcV0fOTaMMoVBq3mLY8ESmEFZXcZ53doPfPIgsSZMZVz74bSy'
