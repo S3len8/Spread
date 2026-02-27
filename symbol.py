@@ -2,11 +2,16 @@ import aiohttp
 import asyncio
 import requests
 import nest_asyncio
+
 nest_asyncio.apply()
 
+from dotenv import load_dotenv
+import os
 
-API_KEY = 'OcirhzEKhIgPDd9wcV0fOTaMMoVBq3mLY8ESmEFZXcZ53doPfPIgsSZMZVz74bSy'
-API_SECRET = 'jvYQuPuM26KLvY3M67FlYtAZpCHLTf7Hc3qBhs7Ch5DPx6mxQ7mqDCwZnMywm1Sf'
+load_dotenv()
+
+API_KEY = os.getenv("API_KEY")
+API_SECRET = os.getenv("API_SECRET")
 
 BINANCE_ORDER_BOOK = 'https://fapi.binance.com/fapi/v1/ticker/bookTicker'
 BINANCE_DATA = 'https://fapi.binance.com/fapi/v1/ticker/24hr'
