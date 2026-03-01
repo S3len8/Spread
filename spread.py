@@ -1,177 +1,47 @@
-from symbol import binance_funding, bitget_funding, mexc_funding, gate_funding, source_data
-
-bybit_spread = source_data['bybit']
-kucoin_spread = source_data['kucoin']
+from symbol import get_source_data
 
 
-def get_all_bid():
-    binance = {
-        symbol: value['bid']
-        for symbol, value in binance_funding.items()
-    }
-    bybit = {
-        symbol: value['bid']
-        for symbol, value in bybit_spread.items()
-    }
-    bitget = {
-        symbol: value['bid']
-        for symbol, value in bitget_funding.items()
-    }
-    mexc = {
-        symbol: value['bid']
-        for symbol, value in mexc_funding.items()
-    }
-    kucoin = {
-        symbol: value['bid']
-        for symbol, value in kucoin_spread.items()
-    }
-    gate = {
-        symbol: value['bid']
-        for symbol, value in gate_funding.items()
-    }
-
+def get_all_bid(source_data, binance_funding, bitget_funding, mexc_funding, gate_funding):
+    bybit_spread = source_data['bybit']
+    kucoin_spread = source_data['kucoin']
     return {
-        'binance': binance,
-        'bybit': bybit,
-        'bitget': bitget,
-        'mexc': mexc,
-        'kucoin': kucoin,
-        'gate': gate,
+        'binance': {s: v['bid'] for s, v in binance_funding.items()},
+        'bybit':   {s: v['bid'] for s, v in bybit_spread.items()},
+        'bitget':  {s: v['bid'] for s, v in bitget_funding.items()},
+        'mexc':    {s: v['bid'] for s, v in mexc_funding.items() if v['bid'] is not None},
+        'kucoin':  {s: v['bid'] for s, v in kucoin_spread.items()},
+        'gate':    {s: v['bid'] for s, v in gate_funding.items()},
     }
 
 
-get_all_bid = get_all_bid()
-# print(get_all_bid)
-
-
-def get_all_ask():
-    binance = {
-        symbol: value['ask']
-        for symbol, value in binance_funding.items()
-    }
-    bybit = {
-        symbol: value['ask']
-        for symbol, value in bybit_spread.items()
-    }
-    bitget = {
-        symbol: value['ask']
-        for symbol, value in bitget_funding.items()
-    }
-    mexc = {
-        symbol: value['ask']
-        for symbol, value in mexc_funding.items()
-    }
-    kucoin = {
-        symbol: value['ask']
-        for symbol, value in kucoin_spread.items()
-    }
-    gate = {
-        symbol: value['ask']
-        for symbol, value in gate_funding.items()
-    }
-
+def get_all_ask(source_data, binance_funding, bitget_funding, mexc_funding, gate_funding):
+    bybit_spread = source_data['bybit']
+    kucoin_spread = source_data['kucoin']
     return {
-        'binance': binance,
-        'bybit': bybit,
-        'bitget': bitget,
-        'mexc': mexc,
-        'kucoin': kucoin,
-        'gate': gate,
+        'binance': {s: v['ask'] for s, v in binance_funding.items()},
+        'bybit':   {s: v['ask'] for s, v in bybit_spread.items()},
+        'bitget':  {s: v['ask'] for s, v in bitget_funding.items()},
+        'mexc':    {s: v['ask'] for s, v in mexc_funding.items() if v['ask'] is not None},
+        'kucoin':  {s: v['ask'] for s, v in kucoin_spread.items()},
+        'gate':    {s: v['ask'] for s, v in gate_funding.items()},
     }
 
 
-get_all_ask = get_all_ask()
-# print(get_all_ask)
-
-
-def min_bid():
+def get_spread(all_bid, all_ask):
     result = {}
-
     all_symbols = set()
-
-    for exchange_data in get_all_bid.values():
-        all_symbols.update(exchange_data.keys())
-
-    for symbol in all_symbols:
-        min_value = float("inf")
-        min_exchange = None
-
-        for exchange, exchange_data in get_all_bid.items():
-            bid = exchange_data.get(symbol)
-
-            if bid is None:
-                continue
-
-            if bid < min_value:
-                min_value = bid
-                min_exchange = exchange
-
-        if min_exchange is not None:
-            result[symbol] = {
-                "exchange": min_exchange,
-                "min_bid": min_value
-            }
-
-    return result
-
-
-bid = min_bid()
-print(bid)
-
-
-def max_ask():
-    result = {}
-
-    all_symbols = set()
-
-    for exchange_data in get_all_ask.values():
-        all_symbols.update(exchange_data.keys())
-
-    for symbol in all_symbols:
-        max_value = float("-inf")
-        max_exchange = None
-
-        for exchange, exchange_data in get_all_ask.items():
-            ask = exchange_data.get(symbol)
-
-            if ask is None:
-                continue
-
-            if ask > max_value:
-                max_value = ask
-                max_exchange = exchange
-
-        if max_exchange is not None:
-            result[symbol] = {
-                "exchange": max_exchange,
-                "max_ask": max_value
-            }
-
-    return result
-
-
-ask = max_ask()
-print(ask)
-
-
-def spread():
-    result = {}
-
-    all_symbols = set()
-
-    for exchange_data in get_all_bid.values():
+    for exchange_data in all_bid.values():
         all_symbols.update(exchange_data.keys())
 
     for symbol in all_symbols:
         min_ask = float("inf")
         max_bid = float("-inf")
-
         min_ask_exchange = None
         max_bid_exchange = None
 
-        for exchange in get_all_bid.keys():
-            bid = get_all_bid[exchange].get(symbol)
-            ask = get_all_ask[exchange].get(symbol)
+        for exchange in all_bid.keys():
+            bid = all_bid[exchange].get(symbol)
+            ask = all_ask[exchange].get(symbol)
 
             if bid is not None and bid > max_bid:
                 max_bid = bid
@@ -181,7 +51,6 @@ def spread():
                 min_ask = ask
                 min_ask_exchange = exchange
 
-        # Need for don`t get same exchanges
         if (
             min_ask_exchange
             and max_bid_exchange
@@ -195,45 +64,23 @@ def spread():
                 "max_bid": max_bid,
                 "spread_ratio": max_bid / min_ask
             }
-
     return result
 
 
-spread = spread()
+# async — call async get_source_data()
+async def get_summary() -> dict:
+    source_data, binance_funding, bitget_funding, mexc_funding, gate_funding = await get_source_data()
 
-for symbol, data in spread.items():
-    print(symbol, data)
+    all_bid = get_all_bid(source_data, binance_funding, bitget_funding, mexc_funding, gate_funding)
+    all_ask = get_all_ask(source_data, binance_funding, bitget_funding, mexc_funding, gate_funding)
+    spread = get_spread(all_bid, all_ask)
 
-
-# spread_data = spread()
-# print(spread_data)
-
-def spread_ratio():
     result = {}
     for symbol, value in spread.items():
         if value['spread_ratio'] > 1.012:
             result[symbol] = {
+                'buy_on': value['buy_on'],
+                'sell_on': value['sell_on'],
                 'spread': value['spread_ratio']
             }
-
     return result
-
-
-spread_ratio = spread_ratio()
-print(spread_ratio)
-
-
-def summary():
-    result = {}
-    for symbol in spread_ratio.keys() & spread.keys():
-        result[symbol] = {
-            'buy_on': spread[symbol]['buy_on'],
-            'sell_on': spread[symbol]['sell_on'],
-            'spread': spread_ratio[symbol]['spread']
-        }
-
-    return result
-
-
-summary = summary()
-print(summary)

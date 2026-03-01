@@ -5,12 +5,17 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Update
 from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.exceptions import TelegramBadRequest
 
 from fastapi import FastAPI, Request
 
-# ====== Config ======
-BOT_TOKEN = "8209170851:AAGViuYiZsc7O2m_P-yoMYDKOVmfPcoOZJ4"
-WEBHOOK_URL = "https://labradoritic-ingestible-clementina.ngrok-free.dev/webhook"  # Update every time ngrok restarts
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
 # ====== Initialization ======
 bot = Bot(token=BOT_TOKEN)
@@ -33,9 +38,13 @@ async def start_handler(message: types.Message):
 @dp.callback_query()
 async def callback_handler(callback: types.CallbackQuery):
     if callback.data == "show_spread":
-        data = calculation()
-        text = ""
+        # Closed callback
+        await callback.answer("⏳ Loading...")
+        msg = await callback.message.answer("🔄 Fetching data from exchanges...")
 
+        data = await calculation()
+
+        text = ""
         for symbol, value in data.items():
             text += (
                 f"🚀 {symbol}\n"
@@ -51,23 +60,24 @@ async def callback_handler(callback: types.CallbackQuery):
         if not text:
             text = "No spreads for this moment"
 
-        await callback.message.answer(text)
-        await callback.answer()
+        # Telegram have limitation for messages in 4096 symbols
+        try:
+            await msg.edit_text(text[:4096])
+        except TelegramBadRequest:
+            pass
 
 
-# ====== Lifespan (replaces on_event) ======
+# ====== Lifespan ======
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Runs on startup
-    await bot.set_webhook(WEBHOOK_URL)
-    print(f"Webhook set: {WEBHOOK_URL}")
+    await bot.set_webhook(f"{WEBHOOK_URL}/webhook")
+    print(f"Webhook set: {WEBHOOK_URL}/webhook")
     yield
-    # Runs on shutdown
     await bot.delete_webhook()
     print("Webhook deleted")
 
 
-# ====== FastAPI application ======
+# ====== FastAPI ======
 app = FastAPI(lifespan=lifespan)
 
 
