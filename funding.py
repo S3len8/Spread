@@ -96,8 +96,10 @@ def normalize_kucoin_symbol(symbol: str) -> str:
 async def fetch_funding_kucoin(session, symbol):
     url = KUCOIN_FUNDING.format(symbol=f"{symbol}M")
     try:
-        async with session.get(url) as r:
-            data = await r.json()
+        async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as r:
+            if r.status != 200:
+                return None
+            data = await r.json(content_type=None)  # ignore Content-Type
             if data.get('code') != "200000":
                 return None
             return normalize_kucoin_symbol(symbol), {

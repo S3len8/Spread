@@ -13,7 +13,7 @@ async def calculation() -> dict:
         if volume_buy is None or volume_sell is None:
             continue
 
-        if volume_buy > 150000 or volume_sell > 150000:
+        if volume_buy > 50000 or volume_sell > 50000:
             funding_buy = value['funding buy_on'] or 0
             funding_sell = value['funding sell_on'] or 0
             spread = value['spread']

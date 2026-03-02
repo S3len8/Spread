@@ -3,7 +3,7 @@ from calculation import calculation
 
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Update
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, Update
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.exceptions import TelegramBadRequest
 
@@ -22,10 +22,11 @@ bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
 # ====== Keyboard ======
-keyboard = InlineKeyboardMarkup(
-    inline_keyboard=[
-        [InlineKeyboardButton(text="📊 Active Spreads", callback_data="show_spread")]
-    ]
+keyboard = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="📊 Active Spreads")]
+    ],
+    resize_keyboard=True
 )
 
 
@@ -35,36 +36,35 @@ async def start_handler(message: types.Message):
     await message.answer("Choose activity:", reply_markup=keyboard)
 
 
-@dp.callback_query()
-async def callback_handler(callback: types.CallbackQuery):
-    if callback.data == "show_spread":
-        # Closed callback
-        await callback.answer("⏳ Loading...")
-        msg = await callback.message.answer("🔄 Fetching data from exchanges...")
-
+@dp.message(lambda message: message.text == "📊 Active Spreads")
+async def spread_handler(message: types.Message):
+    msg = await message.answer("🔄 Fetching data from exchanges...")
+    try:
         data = await calculation()
+    except Exception as e:
+        await msg.edit_text(f"❌ Ошибка: {e}")
+        raise
 
-        text = ""
-        for symbol, value in data.items():
-            text += (
-                f"🚀 {symbol}\n"
-                f"Buy on: {value['buy_on']}\n"
-                f"Sell on: {value['sell_on']}\n"
-                f"Funding buy: {value['funding buy_on']}\n"
-                f"Funding sell: {value['funding sell_on']}\n"
-                f"Volume buy 24H: {value['volume_buy_24H']}\n"
-                f"Volume sell 24H: {value['volume_sell_24H']}\n"
-                f"Spread: {value['spread']}\n\n"
-            )
+    text = ""
+    for symbol, value in data.items():
+        text += (
+            f"🚀 {symbol}\n"
+            f"Buy on: {value['buy_on']}\n"
+            f"Sell on: {value['sell_on']}\n"
+            f"Funding buy: {value['funding buy_on']}\n"
+            f"Funding sell: {value['funding sell_on']}\n"
+            f"Volume buy 24H: {value['volume_buy_24H']}\n"
+            f"Volume sell 24H: {value['volume_sell_24H']}\n"
+            f"Spread: {value['spread']}\n\n"
+        )
 
-        if not text:
-            text = "No spreads for this moment"
+    if not text:
+        text = "No spreads for this moment"
 
-        # Telegram have limitation for messages in 4096 symbols
-        try:
-            await msg.edit_text(text[:4096])
-        except TelegramBadRequest:
-            pass
+    try:
+        await msg.edit_text(text[:4096])
+    except TelegramBadRequest:
+        pass
 
 
 # ====== Lifespan ======
