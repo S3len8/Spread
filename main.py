@@ -3,7 +3,7 @@ from calculation import calculation
 
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, Update
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, Update, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.storage.memory import MemoryStorage
 
 from fastapi import FastAPI, Request
@@ -37,6 +37,32 @@ keyboard = ReplyKeyboardMarkup(
 )
 
 
+# == Exchange URL ======
+def exchange_url(exchange: str, symbol: str) -> str | None:
+    base = symbol.replace('USDT', '')
+    exchanges = {
+        'binance': f"https://www.binance.com/en/futures/{base}USDT",
+        'bybit': f"https://www.bybit.com/trade/usdt/{base}USDT",
+        'bitget': f"https://www.bitget.com/futures/usdt/{base}USDT",
+        'mexc': f"https://futures.mexc.com/exchange/{base}_USDT",
+        'gate': f"https://www.gate.io/futures/USDT/{base}_USDT",
+        'kucoin': f"https://www.kucoin.com/futures/trade/{base}USDTM",
+    }
+    return exchanges.get(exchange.lower())
+
+
+# == Button in Message =====
+def create_inline_button(symbol: str, buy_on: str, sell_on: str) -> InlineKeyboardMarkup:
+    buttons = []
+    buy_url = exchange_url(buy_on, symbol)
+    sell_url = exchange_url(sell_on, symbol)
+    if buy_on:
+        buttons.append(InlineKeyboardButton(text=f"📥 Buy — {buy_on.capitalize()}", url=buy_url))
+    if sell_on:
+        buttons.append(InlineKeyboardButton(text=f"📤 Sell — {sell_on.capitalize()}", url=sell_url))
+    return InlineKeyboardMarkup(inline_keyboard=[buttons])
+
+
 # ====== Monitoring loop ======
 async def monitoring_loop(chat_id: int):
     """
@@ -67,11 +93,14 @@ async def monitoring_loop(chat_id: int):
                 funding_buy = value['funding buy_on']
                 funding_sell = value['funding sell_on']
 
+                buy_on = value['buy_on']
+                sell_on = value['sell_on']
+
                 text = (
                     f"🚀 <b>{symbol}</b>\n"
                     f"━━━━━━━━━━━━━━━━\n"
-                    f"📥 Buy on:  <b>{value['buy_on'].upper()}</b>\n"
-                    f"📤 Sell on: <b>{value['sell_on'].upper()}</b>\n"
+                    f"📥 Buy on:  <b>{buy_on.upper()}</b>\n"
+                    f"📤 Sell on: <b>{sell_on.upper()}</b>\n"
                     f"━━━━━━━━━━━━━━━━\n"
                     f"📈 Spread:      <b>{spread_pct:.3f}%</b>\n"
                     f"📊 Spread+Fund: <b>{spread_all_pct:.3f}%</b>\n"
@@ -88,8 +117,10 @@ async def monitoring_loop(chat_id: int):
                     f"📦 Vol sell 24H: ${value['volume_sell_24H']:,.0f}"
                 )
 
+                inline_kb = create_inline_button(symbol, buy_on, sell_on)
+
                 try:
-                    await bot.send_message(chat_id, text, parse_mode="HTML")
+                    await bot.send_message(chat_id, text, reply_markup=inline_kb, parse_mode="HTML")
                 except Exception as e:
                     await bot.send_message(chat_id, f"⚠️ Failed to send {symbol}: {e}")
 
