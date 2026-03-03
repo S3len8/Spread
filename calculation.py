@@ -18,8 +18,10 @@ async def calculation() -> dict:
             funding_sell = value['funding sell_on'] or 0
             spread = value['spread']
 
-            funding_all = funding_sell - funding_buy
-            spread_all = spread + funding_all
+            # spread is a ratio (e.g. 1.015), convert to % before adding funding (e.g. 0.0001)
+            spread_pct = (spread - 1) * 100
+            funding_all = (funding_sell - funding_buy) * 100
+            spread_all = spread_pct + funding_all
 
             result[symbol] = {
                 'buy_on': value['buy_on'],

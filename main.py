@@ -5,10 +5,10 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, Update
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.exceptions import TelegramBadRequest
 
 from fastapi import FastAPI, Request
 
+import asyncio
 import os
 from dotenv import load_dotenv
 
@@ -17,54 +17,127 @@ load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
+SCAN_INTERVAL = 30  # seconds between scans
+
 # ====== Initialization ======
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
+# ====== State: one monitoring task per chat ======
+# chat_id -> asyncio.Task
+monitoring_tasks: dict[int, asyncio.Task] = {}
+
 # ====== Keyboard ======
 keyboard = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text="📊 Active Spreads")]
+        [KeyboardButton(text="📊 Active Spreads")],
+        [KeyboardButton(text="🛑 Stop Monitoring")],
     ],
     resize_keyboard=True
 )
 
 
+# ====== Monitoring loop ======
+async def monitoring_loop(chat_id: int):
+    """
+    Runs until cancelled.
+    Every SCAN_INTERVAL seconds:
+      - calls calculation()
+      - sends each symbol as a separate message
+    """
+    await bot.send_message(chat_id, "✅ Monitoring started. Scanning every 30 seconds...")
+
+    while True:
+        try:
+            data = await calculation()
+        except asyncio.CancelledError:  # for stop long-lived processes
+            raise
+        except Exception as e:
+            await bot.send_message(chat_id, f"❌ Error fetching data: {e}")
+            await asyncio.sleep(SCAN_INTERVAL)
+            continue
+
+        if not data:  # For if coins with spreads not found
+            await bot.send_message(chat_id, "🔍 No spreads found on this scan.")
+        else:
+            for symbol, value in data.items():
+                spread_pct = (value['spread'] - 1) * 100
+                spread_all_pct = value['spread_all'] if value.get('spread_all') is not None else spread_pct
+
+                funding_buy = value['funding buy_on']
+                funding_sell = value['funding sell_on']
+
+                text = (
+                    f"🚀 <b>{symbol}</b>\n"
+                    f"━━━━━━━━━━━━━━━━\n"
+                    f"📥 Buy on:  <b>{value['buy_on'].upper()}</b>\n"
+                    f"📤 Sell on: <b>{value['sell_on'].upper()}</b>\n"
+                    f"━━━━━━━━━━━━━━━━\n"
+                    f"📈 Spread:      <b>{spread_pct:.3f}%</b>\n"
+                    f"📊 Spread+Fund: <b>{spread_all_pct:.3f}%</b>\n"
+                    f"━━━━━━━━━━━━━━━━\n"
+                    f"💰 Funding buy:  {funding_buy * 100:.4f}%" if funding_buy is not None else f"💰 Funding buy:  —"
+                )
+                # append rest of message
+                text += (
+                    f"\n💰 Funding sell: {funding_sell * 100:.4f}%" if funding_sell is not None else f"\n💰 Funding sell: —"
+                )
+                text += (
+                    f"\n━━━━━━━━━━━━━━━━\n"
+                    f"📦 Vol buy 24H:  ${value['volume_buy_24H']:,.0f}\n"
+                    f"📦 Vol sell 24H: ${value['volume_sell_24H']:,.0f}"
+                )
+
+                try:
+                    await bot.send_message(chat_id, text, parse_mode="HTML")
+                except Exception as e:
+                    await bot.send_message(chat_id, f"⚠️ Failed to send {symbol}: {e}")
+
+        await asyncio.sleep(SCAN_INTERVAL)
+
+
 # ====== Handlers ======
 @dp.message(Command("start"))
 async def start_handler(message: types.Message):
-    await message.answer("Choose activity:", reply_markup=keyboard)
+    await message.answer(
+        "👋 Welcome! Press <b>📊 Active Spreads</b> to start monitoring.\n"
+        "Press <b>🛑 Stop Monitoring</b> to stop.",
+        reply_markup=keyboard,
+        parse_mode="HTML"
+    )
 
 
-@dp.message(lambda message: message.text == "📊 Active Spreads")
+@dp.message(lambda m: m.text == "📊 Active Spreads")
 async def spread_handler(message: types.Message):
-    msg = await message.answer("🔄 Fetching data from exchanges...")
-    try:
-        data = await calculation()
-    except Exception as e:
-        await msg.edit_text(f"❌ Ошибка: {e}")
-        raise
+    chat_id = message.chat.id
 
-    text = ""
-    for symbol, value in data.items():
-        text += (
-            f"🚀 {symbol}\n"
-            f"Buy on: {value['buy_on']}\n"
-            f"Sell on: {value['sell_on']}\n"
-            f"Funding buy: {value['funding buy_on']}\n"
-            f"Funding sell: {value['funding sell_on']}\n"
-            f"Volume buy 24H: {value['volume_buy_24H']}\n"
-            f"Volume sell 24H: {value['volume_sell_24H']}\n"
-            f"Spread: {value['spread']}\n\n"
-        )
+    # Cancel existing task for this chat if running
+    existing = monitoring_tasks.get(chat_id)
+    if existing and not existing.done():
+        existing.cancel()
+        await message.answer("🔄 Restarting monitoring...")
 
-    if not text:
-        text = "No spreads for this moment"
+    # Start new monitoring task
+    task = asyncio.create_task(monitoring_loop(chat_id))
+    monitoring_tasks[chat_id] = task
 
-    try:
-        await msg.edit_text(text[:4096])
-    except TelegramBadRequest:
-        pass
+    # Clean up task reference when done
+    def on_task_done(t: asyncio.Task):
+        if monitoring_tasks.get(chat_id) is t:
+            monitoring_tasks.pop(chat_id, None)
+
+    task.add_done_callback(on_task_done)
+
+
+@dp.message(lambda m: m.text == "🛑 Stop Monitoring")
+async def stop_handler(message: types.Message):
+    chat_id = message.chat.id
+    task = monitoring_tasks.get(chat_id)
+    if task and not task.done():
+        task.cancel()
+        await message.answer("🛑 Monitoring stopped.")
+    else:
+        await message.answer("ℹ️ Monitoring is not running.")
 
 
 # ====== Lifespan ======
@@ -73,6 +146,9 @@ async def lifespan(app: FastAPI):
     await bot.set_webhook(f"{WEBHOOK_URL}/webhook")
     print(f"Webhook set: {WEBHOOK_URL}/webhook")
     yield
+    # Cancel all running tasks on shutdown
+    for task in monitoring_tasks.values():
+        task.cancel()
     await bot.delete_webhook()
     print("Webhook deleted")
 
