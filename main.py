@@ -1,3 +1,4 @@
+import time
 from contextlib import asynccontextmanager
 from calculation import calculation
 
@@ -76,6 +77,7 @@ async def monitoring_loop(chat_id: int):
     while True:
         try:
             data = await calculation()
+            await bot.send_message(chat_id, "🔍 New loop start")
         except asyncio.CancelledError:  # for stop long-lived processes
             raise
         except Exception as e:
@@ -121,6 +123,7 @@ async def monitoring_loop(chat_id: int):
 
                 try:
                     await bot.send_message(chat_id, text, reply_markup=inline_kb, parse_mode="HTML")
+                    time.sleep(1.0)
                 except Exception as e:
                     await bot.send_message(chat_id, f"⚠️ Failed to send {symbol}: {e}")
 
