@@ -1,6 +1,10 @@
 from symbol import get_source_data
 
 
+SPREAD_FILTER_MIN = 1.012
+SPREAD_FILTER_MAX = 5.000
+
+
 def get_all_bid(source_data, binance_funding, bitget_funding, mexc_funding, gate_funding):
     bybit_spread = source_data['bybit']
     kucoin_spread = source_data['kucoin']
@@ -77,7 +81,7 @@ async def get_summary() -> dict:
 
     result = {}
     for symbol, value in spread.items():
-        if value['spread_ratio'] > 1.012:
+        if value['spread_ratio'] > SPREAD_FILTER_MIN and value['spread_ratio'] < SPREAD_FILTER_MAX:
             result[symbol] = {
                 'buy_on': value['buy_on'],
                 'sell_on': value['sell_on'],
