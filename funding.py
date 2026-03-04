@@ -90,7 +90,7 @@ def get_funding_gate(summary_volume):
 
 
 def normalize_kucoin_symbol(symbol: str) -> str:
-    return symbol.replace('-', '').replace('_', '').replace('USDTM', 'USDT').replace('M', '')
+    return symbol.replace('-', '').replace('_', '').replace('USDTM', 'USDT')
 
 
 async def fetch_funding_kucoin(session, symbol):

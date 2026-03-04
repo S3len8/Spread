@@ -16,12 +16,17 @@ BINANCE_FUNDING = 'https://fapi.binance.com/fapi/v1/premiumIndex'
 BINANCE_FEES = 'https://fapi.binance.com/fapi/v1/commissionRate'
 BINANCE_MIN_SIZE = 'https://fapi.binance.com/fapi/v1/exchangeInfo'
 BYBIT_DATA = 'https://api.bybit.com/v5/market/tickers'
+BYBIT_MIN_SIZE = 'https://api.bybit.com/v5/market/instruments-info?category=linear'
 BITGET = 'https://api.bitget.com/api/v2/mix/market/tickers'
+BITGET_MIN_SIZE = 'https://api.bitget.com/api/v2/mix/market/contracts?productType=USDT-FUTURES'
 MEXC = 'https://contract.mexc.com/api/v1/contract/ticker'
+MEXC_MIN_SIZE = 'https://contract.mexc.com/api/v1/contract/detail'
 KUCOIN = 'https://api-futures.kucoin.com/api/v1/contracts/active'
 KUCOIN_FUNDING = "https://api-futures.kucoin.com/api/v1/funding-rate/{symbol}/current"
 KUCOIN_ORDER_BOOK = 'https://api-futures.kucoin.com/api/v1/ticker'
+KUCOIN_MIN_SIZE = 'https://api-futures.kucoin.com/api/v1/contracts/active'
 GATE = 'https://api.gateio.ws/api/v4/futures/usdt/tickers'
+GATE_MIN_SIZE = 'https://api.gateio.ws/api/v4/futures/usdt/contracts'
 
 FEES = {
     'Binance': {'maker': 0.02, 'taker': 0.05},
